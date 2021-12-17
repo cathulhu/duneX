@@ -1,0 +1,227 @@
+ [
+  {
+    "markerOffset": 1,
+    "otherName": "",
+    "name": "RAL_ECHO",
+    "coordinates": [
+      1.2,
+      51.6
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "",
+    "name": "QMUL",
+    "coordinates": [
+      0.0404,
+      51.5241
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "",
+    "name": "SURFSARA",
+    "coordinates": [
+      4.904,
+      52.368
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "",
+    "name": "GPGrid",
+    "coordinates": [
+      -88.57,
+      41.24
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "",
+    "name": "GPGRID",
+    "coordinates": [
+      -88.27,
+      41.84
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "",
+    "name": "CERN_PDUNE_CASTOR",
+    "coordinates": [
+      6,
+      46
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "",
+    "name": "PRAGUE",
+    "coordinates": [
+      14.469,
+      50.123
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "FNAL_DCACHE_TEST",
+    "name": "FNAL_DCACHE",
+    "coordinates": [
+      -88.27,
+      41.84
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "BNL-SDCC-CE01",
+    "name": "DUNE_US_BNL_SDCC",
+    "coordinates": [
+      -72.876311,
+      40.86794
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "DUNE_FR_CCIN2P3",
+    "name": "DUNE_FR_CCIN2P3_XROOTD",
+    "coordinates": [
+      4.87,
+      45.78
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "",
+    "name": "NERSC",
+    "coordinates": [
+      -122.272778,
+      37.871667
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "othername": "WSU",
+    "name": "WSU - GRID_CE2",
+    "coordinates": [
+      -83.067,
+      42.358
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "",
+    "name": "CERN_PDUNE_EOS",
+    "coordinates": [
+      6.04,
+      46.23
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "US_FNAL",
+    "name": "GPGRID",
+    "coordinates": [
+      -88.57,
+      41.24
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "RAL-PP",
+    "name": "UKI-SOUTHGRID-RALLPP",
+    "coordinates": [
+      -1.31,
+      51.57
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "",
+    "name": "T3_US_NERSC",
+    "coordinates": [
+      -122.3,
+      37.867
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "",
+    "name": "BR_CBPF",
+    "coordinates": [
+      -43.174,
+      -22.954
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "",
+    "name": "CA_VICTORIA",
+    "coordinates": [
+      -123.31,
+      48.47
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "",
+    "name": "IN_TIFR",
+    "coordinates": [
+      72.806,
+      18.907
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "BNL",
+    "name": "US_BNL",
+    "coordinates": [
+      -72,
+      40
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "FNAL",
+    "name": "US_FNAL",
+    "coordinates": [
+      -88.255,
+      41.841
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "SU-ITS-CE2",
+    "name": "US_SU_ITS",
+    "coordinates": [
+      -76.14,
+      43.04
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "SLATE_US_NMSU_DISCOVERY",
+    "name": "NMSU-DISCOVERY",
+    "coordinates": [
+      -106.77,
+      32.31
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "JINR",
+    "name": "JINR_CONDOR_CE",
+    "coordinates": [
+      37.196,
+      56.743
+    ]
+  },
+  {
+    "markerOffset": 1,
+    "otherName": "",
+    "name": "BR_UNICAMP",
+    "coordinates": [
+      -47.05691000711719,
+      -22.81839974327466
+    ]
+  }
+]
