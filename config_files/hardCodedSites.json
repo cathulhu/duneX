@@ -87,5 +87,13 @@
       "longitude": -83.0670536462607,
       "latitude": 42.35823385673308
     }
+  },
+  {
+    "name":"bnl",
+    "coordinates": {
+      "comments": "Brookhaven National Labroatory, Upton New York",
+      "longitude": -72.87515460866717,
+      "latitude": 40.86443045052161
+    }
   }
 ]
