@@ -18,21 +18,21 @@ const { merge } = require('../../routes');
 
 
 
-function loadConfig() {
+// function loadConfig() {
 
-    let hardCodedSites = {}
+//     let hardCodedSites = {}
 
-    fs.readFile('../../config_files/hardCodedSites.json', 'utf8' , (err, data) => {
-      if (err) {
-        console.error(err)
-        return
-      }
+//     fs.readFile('../../config_files/hardCodedSites.json', 'utf8' , (err, data) => {
+//       if (err) {
+//         console.error(err)
+//         return
+//       }
     
-      hardCodedSites = JSON.parse(data)
-      console.log(hardCodedSites)
-    })
+//       hardCodedSites = JSON.parse(data)
+//       console.log(hardCodedSites)
+//     })
 
-}
+// }
 
 
 
@@ -46,17 +46,52 @@ async function buildSites() {
   let rawSites = await downloadSites()
   let processedResults = await processSites(rawSites)
   let postMergeResults = await mergeAllDuplicates(processedResults)
-  let finalSitesObject = await buildLookupTables(postMergeResults)
-  console.log(finalSitesObject)
+  let sitesObject = await buildLookupTables(postMergeResults)
 
+  //at this stage we will update the location data for any hardcoded sites that are 0.0 in CRIC
+  //waiting to do this at this stage so we can use the handy lookup tables we just made
+
+  await loadHardCodedSites(sitesObject)
+  
+  console.log("\n\nFinal Site Output Object:\n\n\n")
+  
+  console.log(sitesObject)
+
+  
 }
 
 
 
 
 
-function tidyUp () {
-  
+
+async function loadHardCodedSites (siteListObject) {
+  let hardCodedSites = {}
+
+  // console.log(siteListObject, "\n\n\n\n")
+  filePath = '../../config_files/hardCodedSites.json'
+
+  const data = await fs.promises.readFile(filePath, 'utf8'); 
+
+  hardCodedSites = JSON.parse(data)
+  // console.log( "\n\n\n\n",hardCodedSites, "\n\n\n")
+
+  for (i in hardCodedSites) {
+
+    let manualyAddedSite = hardCodedSites[i]
+
+    //check to make sure there is a number for both coordinates to avoid adding malformed or example entries from hard coded data
+    if ( !isNaN(manualyAddedSite.coordinates.longitude) && !isNaN(manualyAddedSite.coordinates.latitude) ) {
+      
+      let targetIndex = siteListObject.nameLookupMap.get(manualyAddedSite.name)
+
+      console.log("Found hardcoded entry for  \"" + manualyAddedSite.name + "\"  in file: " + filePath)
+      
+      //update the coordinates for the appropriate entry in siteListObject
+      siteListObject.sites[targetIndex].longitude = manualyAddedSite.coordinates.longitude
+      siteListObject.sites[targetIndex].latitude = manualyAddedSite.coordinates.latitude
+    }
+  }
 }
 
 
@@ -415,23 +450,30 @@ async function downloadSites() {
 
 
 
-
-
-
-
-
  function buildLookupTables(allSites) {
   let IDlookupMap = new Map();
   let nameLookupMap = new Map();
 
+  //lowercase all the names so that we don't have to worry about capitalization for matching later
 
+  for (index in allSites.sites) {
+
+    let thisSitesNames = allSites.sites[index].names
+    for ( x in thisSitesNames ) {
+      thisSitesNames[x] = thisSitesNames[x].toLowerCase()
+    }
+  }
 
   for (x in allSites.sites) {
 
     let siteObject = allSites.sites[x]
 
     IDlookupMap.set(siteObject.assignedID, allSites.sites.indexOf(siteObject))
-    nameLookupMap.set(siteObject.names, allSites.sites.indexOf(siteObject))
+
+    for (nameIndex in siteObject.names) {
+      nameLookupMap.set(siteObject.names[nameIndex], allSites.sites.indexOf(siteObject))
+    }
+
   }
 
   // console.log(allSites, "\n\n")
