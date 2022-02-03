@@ -18,21 +18,16 @@ const { merge } = require('../../routes');
 
 
 
-// function loadConfig() {
+// buildSites will get run by other code, which then returns a fully formed sites Object which can then have transfers added to each site by other module
 
-//     let hardCodedSites = {}
 
-//     fs.readFile('../../config_files/hardCodedSites.json', 'utf8' , (err, data) => {
-//       if (err) {
-//         console.error(err)
-//         return
-//       }
-    
-//       hardCodedSites = JSON.parse(data)
-//       console.log(hardCodedSites)
-//     })
 
-// }
+
+
+
+
+
+
 
 
 
@@ -44,21 +39,52 @@ const { merge } = require('../../routes');
 async function buildSites() {
 
   let rawSites = await downloadSites()
+  console.log("\n")
   let processedResults = await processSites(rawSites)
+  console.log("\n")
   let postMergeResults = await mergeAllDuplicates(processedResults)
+  console.log("\n")
   let sitesObject = await buildLookupTables(postMergeResults)
 
   //at this stage we will update the location data for any hardcoded sites that are 0.0 in CRIC
   //waiting to do this at this stage so we can use the handy lookup tables we just made
 
   await loadHardCodedSites(sitesObject)
+  console.log("\nOverwriting CRIC downloaded entries with hard coded entrys from /config_files/hardCodedSites.json...")
   
-  console.log("\n\nFinal Site Output Object:\n\n\n")
+  console.log("\n\nFinal Site Output Object:\n")
   
+  // console.log(sitesObject)
+
+
+  //update the reverse table after the hard coded sites have been added too
+
+  sitesObject = await buildLookupTables(sitesObject)
+
   console.log(sitesObject)
 
-  
+  fs.writeFileSync("siteOutput.json", JSON.stringify(sitesObject.sites))
+
+  return sitesObject
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -93,6 +119,29 @@ async function loadHardCodedSites (siteListObject) {
     }
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -153,6 +202,9 @@ async function downloadSites() {
     //build the final version of the JS object from this data
     let siteObject = {}
 
+    //set these up for later use as the transfers for this site will be contained here
+
+
     siteObject.assignedID = uniqueSiteIDs[x]
 
     siteObject.latitude = serializedSites[x].latitude
@@ -162,6 +214,12 @@ async function downloadSites() {
 
     // console.log("\n")
     siteObject.mergeTarget = findPotentialDuplicateSites(siteObject, results)
+    // console.log("\n")
+
+    siteObject.sent = []
+    siteObject.received = []
+    siteObject.allTransfers= []
+    siteObject.transfersByDate = new Map()
 
     results.sites.push(siteObject)
     // console.log(siteObject)
@@ -171,6 +229,17 @@ async function downloadSites() {
   // mergeDuplicates(results)
 
  }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -201,6 +270,14 @@ async function downloadSites() {
 
   return ids
  }
+
+
+
+
+
+
+
+
 
 
 
@@ -284,6 +361,17 @@ async function downloadSites() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
  function findPotentialDuplicateSites(individialSite, allSites) {
 
   let currentNamesLength = individialSite.names.length
@@ -292,7 +380,8 @@ async function downloadSites() {
 
   let mergeCandidateList = []
   let mergeParentList = []
-  // console.log("\n\n\n", allSites.sites)
+
+
 
 
   for (let i=0; i < currentNamesLength; i++) {
@@ -319,9 +408,11 @@ async function downloadSites() {
       }
 
     }
+
   }
 
   if (mergeCandidateList > 0) {
+
     console.log("collision found in site names between these IDs: ", mergeCandidateList, " and ", mergeParentList)
 
   }
@@ -396,7 +487,7 @@ async function downloadSites() {
           console.log("ERROR, merge target ID not found!")
         }
 
-        console.log("merge flag found on site: ", currentSite.assignedID, "@ array index: ", x ,"   for target: ", currentMergeTargetID , "@ array index: ", mergeTargetArrayIndex)
+        console.log("duplicate entry found, site: ", currentSite.assignedID, " (" + currentSite.names[0] + ") " +"@ array index: ", x ,"   for target: ", currentMergeTargetID , "@ array index: ", mergeTargetArrayIndex)
 
         //now do the merging
         
@@ -451,6 +542,11 @@ async function downloadSites() {
 
 
  function buildLookupTables(allSites) {
+
+
+
+
+
   let IDlookupMap = new Map();
   let nameLookupMap = new Map();
 
@@ -476,10 +572,58 @@ async function downloadSites() {
 
   }
 
-  // console.log(allSites, "\n\n")
+  //also make a map for partial word match 
+
+
+  let reverseNameLookupMap = new Map();
+
+  for (index in allSites.sites) {
+
+    let thisSitesNames = allSites.sites[index].names
+    let finalNames = []
+    let thisSitesLookupName = thisSitesNames[0]
+    let mapCoord = nameLookupMap.get(thisSitesLookupName)
+    // console.log(thisSitesLookupName," found at coord ", mapCoord, "in existing lookup")
+
+    for ( x in thisSitesNames ) {
+
+
+      let oneName = thisSitesNames[x]
+      let originalMapCoord = nameLookupMap.get(oneName)
+      let nameParts = oneName.split(/([-|_| ])/)
+
+      // console.log("parts: ", nameParts)
+
+
+      //(nameParts[y]!=="_" || nameParts[y]!=="-" || nameParts[y]==" " ||)
+      
+
+      for (let y=0; y< nameParts.length; y++) {
+
+        if (nameParts[y].length > 2 && nameParts[y]!=="uki" && nameParts[y]!=="grid" ) {
+          // console.log("part: ", nameParts[y], "  length", nameParts[y].length)
+          finalNames.push(nameParts[y])
+
+        }
+      }
+    }
+
+    finalNames = [... new Set(finalNames)]
+
+    for (index in finalNames) {
+      reverseNameLookupMap.set(finalNames[index], mapCoord)
+    }
+
+    // console.log("\n")
+    // console.log("final names:   ", finalNames)
+    // console.log("\n\n\n\n")
+  }
+
+  // console.log(reverseNameLookupMap)
 
   allSites.IDlookupMap = IDlookupMap
   allSites.nameLookupMap = nameLookupMap
+  allSites.reverseNameLookupMap = reverseNameLookupMap
 
   return allSites
 
@@ -492,26 +636,9 @@ async function downloadSites() {
 
 
 
+ 
+
+// buildSites()
 
 
-
-
-
-
-
-
-
-
-
-buildSites()
-
-
-
-
-
-
-
-
-// loadConfig()
-// downloadSites()
-
+module.exports= {buildSites: buildSites}
