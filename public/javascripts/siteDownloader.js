@@ -63,7 +63,12 @@ async function buildSites() {
 
   console.log(sitesObject)
 
-  fs.writeFileSync("siteOutput.json", JSON.stringify(sitesObject.sites))
+  let geoJsonObject = await createGeoJsonFile(sitesObject)
+
+  sitesObject.geoJsonSites = geoJsonObject;
+
+  // fs.writeFileSync("siteOutput.json", JSON.stringify(sitesObject.sites))
+  // fs.writeFileSync("sitesGeoJson.json", JSON.stringify(geoJsonObject))
 
   return sitesObject
 }
@@ -95,7 +100,7 @@ async function loadHardCodedSites (siteListObject) {
   let hardCodedSites = {}
 
   // console.log(siteListObject, "\n\n\n\n")
-  filePath = '../../config_files/hardCodedSites.json'
+  filePath = '../config_files/hardCodedSites.json'
 
   const data = await fs.promises.readFile(filePath, 'utf8'); 
 
@@ -183,6 +188,34 @@ async function downloadSites() {
 
 
 
+ function createGeoJsonFile (passedSiteObject) {
+
+  // console.log("\n\n\n\n\n\n\n\n", passedSiteObject, "\n\n\n\n\n\n\n")
+
+  let geoJsonObject = { "type": "FeatureCollection", "features":[]}
+
+  for (x in passedSiteObject.sites) {
+    let newSiteObject = {"type": "Feature", "geometry": {"type": "Point", "coordinates": [parseFloat(passedSiteObject.sites[x].longitude), parseFloat(passedSiteObject.sites[x].latitude)]}, "properties": {"internalID": passedSiteObject.sites[x].assignedID} }
+
+    geoJsonObject.features.push(newSiteObject)
+  }
+
+  return geoJsonObject
+ }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -220,6 +253,9 @@ async function downloadSites() {
     siteObject.received = []
     siteObject.allTransfers= []
     siteObject.transfersByDate = new Map()
+
+    siteObject.totalSent = 0;
+    siteObject.totalRecieved = 0;
 
     results.sites.push(siteObject)
     // console.log(siteObject)

@@ -1,4 +1,7 @@
 const {buildSites} = require("./siteDownloader");
+const fs = require('fs');
+
+
 
 
 function loadRucioConfig() {
@@ -194,6 +197,7 @@ function sortTransfers(sitesObject, transferObject) {
 
   // console.log(transferObject.days[0].transfers[0])
 
+  sitesObject.networkTransferTotal = 0;
 
  for (i in transferObject.days) {
    // console.log(transferObject.days[i].transfers)
@@ -204,6 +208,8 @@ function sortTransfers(sitesObject, transferObject) {
    for (j in transferObject.days[i].transfers) {
 
       let singleTransfer = transferObject.days[i].transfers[j]
+
+      sitesObject.networkTransferTotal += singleTransfer.file_size
 
       let from = singleTransfer.matchedSource
       let to = singleTransfer.matchedDestination
@@ -233,6 +239,14 @@ function sortTransfers(sitesObject, transferObject) {
 
       let siteObjectTo = sitesObject.sites[siteArrayIndexFromLookupSrc]
       let siteObjectFrom = sitesObject.sites[siteArrayIndexFromLookupDest]
+
+      //update this sites stats to reflect transfers
+
+      console.log("     singeTransfer:   ", singleTransfer.file_size)
+      siteObjectFrom.totalSent += singleTransfer.file_size;
+      siteObjectTo.totalRecieved += singleTransfer.file_size;
+
+      console.log("   POST ADD   ", siteObjectFrom, siteObjectTo)
 
       siteObjectTo.allTransfers.push(singleTransfer)
       siteObjectFrom.allTransfers.push(singleTransfer)
@@ -354,7 +368,7 @@ async function buildSiteTransferRecords(sitesObject, passedTransferObject) {
   // console.log(transfers.days)
 
   //setup list of unknown sites that don't match any words
-  sitesObject.unprovenSites = []
+  sitesObject.uncertainSites = []
 
   //LOGIC: go through each transfer, locate source and destination from list, do fuzzy matching if need be
   //       add transfer to each objects "all transfers member", then add it to each sites corresponding, sent and recieved method under the correct date
@@ -375,8 +389,8 @@ async function buildSiteTransferRecords(sitesObject, passedTransferObject) {
 
       if ( !sitesObject.nameLookupMap.has(source) ) //if inputting the whole faccility name doesn't yield a match we start trying to match individual words
       {
-        if (!sitesObject.unprovenSites.includes(source)) {
-            sitesObject.unprovenSites.push(source)
+        if (!sitesObject.uncertainSites.includes(source)) {
+            sitesObject.uncertainSites.push(source)
         }
         
         console.log("\nidentifying sender...")
@@ -388,8 +402,8 @@ async function buildSiteTransferRecords(sitesObject, passedTransferObject) {
 
       if ( !sitesObject.nameLookupMap.has(destination) ) //if inputting the whole faccility name doesn't yield a match we start trying to match individual words
       {
-        if (!sitesObject.unprovenSites.includes(destination)) {
-          sitesObject.unprovenSites.push(destination)
+        if (!sitesObject.uncertainSites.includes(destination)) {
+          sitesObject.uncertainSites.push(destination)
         } 
         console.log("\nidentifying reciever...")
         ascertainedDestination = siteNameFuzzyMatching(sitesObject, destination)   //best guess based on matching words in faccillity from field:
@@ -417,31 +431,147 @@ async function buildSiteTransferRecords(sitesObject, passedTransferObject) {
 
 
 
+function calculateSiteMetaStats(passedSitesObject) {
+
+  // console.log("      network total:          ", passedSitesObject.networkTransferTotal)
+  console.log("\n\n\n      passed site for meta calc:          \n\n", passedSitesObject.geoJsonSites.features)
 
 
 
+  for (let i=0; i < passedSitesObject.sites.length; i++) {
+    let site = passedSitesObject.sites[i];
 
+    site.rxFractionOfWholePeriod = 0;
+    site.txFractionOfWholePeriod = 0;
 
+    //Math.round(number * 10) / 10
 
+    if (site.totalRecieved > 0) {
+      site.rxFractionOfWholePeriod = Math.ceil(site.totalRecieved /passedSitesObject.networkTransferTotal * 1000)/1000;
+    }
+    
+    if (site.totalSent > 0 ) {
+      site.txFractionOfWholePeriod = Math.ceil(site.totalSent / passedSitesObject.networkTransferTotal * 1000)/1000;
+    }
 
+    //add the transfer ratios from the data model to geo JSON for easier display
+    for (let y=0; y < passedSitesObject.geoJsonSites.features.length; y++) {
+      if (passedSitesObject.geoJsonSites.features[y].properties.internalID == site.assignedID) {
+        passedSitesObject.geoJsonSites.features[y].properties.rxRatio = site.rxFractionOfWholePeriod
+        passedSitesObject.geoJsonSites.features[y].properties.txRatio = site.txFractionOfWholePeriod
 
+        passedSitesObject.geoJsonSites.features[y].properties.siteLat = site.latitude
+        passedSitesObject.geoJsonSites.features[y].properties.siteLon = site.longitude
 
+        passedSitesObject.geoJsonSites.features[y].properties.name = site.names[0]
+      }
+    }
+    
+  }
 
+  //add this info to the geoJSON data too
 
+  // for let(i=0; i < passedSitesObject[1].geoJsonSites.features.length; i++) {
 
+  // }
 
-
-
-
-
-async function triggerRecordDownloader(searchParametersObject) {
-
-    runPython((data) => {
-
-    } ,searchParametersObject)
-
-
+  return passedSitesObject
 }
+
+
+
+
+
+
+
+function createGeoJsonTransferFile (passedTransferObject) {
+
+  // console.log("\n\n\n\n\n\n\n\n geoJSON debug", passedTransferObject, "\n\n\n\n\n\n\n")
+
+  let transfersByDay = passedTransferObject[1].days
+
+  // console.log("passed big object geoJSonSites:          ", passedTransferObject[0].sites)
+
+  let geoJSONtransfers = []
+  let animatedgeoJsonTransfers = []
+
+  for (let x=0; x < transfersByDay.length; x++) {
+
+    // console.log("top: ", transfersByDay[x])
+    
+    // console.log("length: ", transfersByDay[x].transfers.length)
+
+    for (let y=0; y < transfersByDay[x].transfers.length; y++) {
+      // console.log("each: ", transfersByDay[x].transfers[y])
+    
+
+      let transfer = transfersByDay[x].transfers[y]
+      
+      let siteIndexSent = passedTransferObject[0].nameLookupMap.get(transfer.matchedSource)
+      let sendingSite = passedTransferObject[0].sites[siteIndexSent]
+      let coordFrom = [parseFloat(sendingSite.longitude), parseFloat(sendingSite.latitude)]
+      // console.log("from: ", coordFrom)
+      
+      let siteIndexRecv = passedTransferObject[0].nameLookupMap.get(transfer.matchedDestination)
+      let receivingSite = passedTransferObject[0].sites[siteIndexRecv]
+      let coordTo = [parseFloat(receivingSite.longitude), parseFloat(receivingSite.latitude)]
+      // console.log("to: ", coordTo)
+
+
+
+
+      let date = new Date(transfer.start_time)
+      let firstOfMonthDate = new Date(date.getFullYear(), date.getMonth(), 1)
+      let MiddleOfMonthDate = new Date(date.getFullYear(), date.getMonth(), 15)
+      let EndOfMonthDate = new Date(date.getFullYear(), date.getMonth(), 28)
+      // console.log("  month nunber for date:  ", date.getMonth()+1)
+      let firstOfMonthDateUnixTime = Math.floor(firstOfMonthDate/1000)
+      let MiddleOfMonthDateUnixTime = Math.floor(MiddleOfMonthDate/1000)
+      let EndOfMonthDateUnixTime = Math.floor(EndOfMonthDate/1000)
+
+      let transferTransaction = {"type":"Feature", "geometry":{ "type": "LineString", "coordinates": [ [coordFrom[0], coordFrom[1]], [coordTo[0], coordTo[1]] ]}, "properties": {"from": sendingSite.names[0], "to": receivingSite.names[0], "toLong":coordTo[0], "toLat":coordTo[1], "fromLong":coordFrom[0], "fromLat":coordFrom[1], "size": parseInt(transfer.file_size), "duration": "Ask Zack how to get", "date": transfer.start_time, "from": transfer.source, "to": transfer.destination, "speed": transfer["transfer_speed(MB/s)"] } }
+      // let transferTransactionAnim = {"type":"Feature", "geometry":{ "type": "LineString", "coordinates": [ [coordFrom[0], coordTo[0], 0, firstOfMonthDateUnixTime], [coordFrom[1], coordTo[1], 0, MiddleOfMonthDateUnixTime ], [coordFrom[1], coordTo[1], 0, EndOfMonthDateUnixTime ] ] }, "properties": { "from": sendingSite.names[0], "to": receivingSite.names[0], "toLong":coordTo[0], "toLat":coordTo[1], "fromLong":coordFrom[0], "fromLat":coordFrom[1], "size": parseInt(transfer.file_size), "duration": "Ask Zack how to get", "date": transfer.start_time, "from": transfer.source, "to": transfer.destination, "speed": transfer["transfer_speed(MB/s)"] } }
+      
+      // **** TODO ***** put in haversine equation to calculate middle interpolated coordinates
+      // **** TODO ***** NOTE: currently setting everything to the first day of the month to show everything in that month, until I can come up with a better way to visualize
+      // console.log("  anim coords ",transferTransactionAnim.geometry.coordinates)
+
+      geoJSONtransfers.push(transferTransaction)
+      // animatedgeoJsonTransfers.push(transferTransactionAnim)
+      // console.log ("pertinent info: ", transfer, siteIndex )
+
+
+    }
+  }
+
+  let transferObjectFinal={}
+
+  console.log("\n\n\n\n\n\n\n\n geoJSON result", geoJSONtransfers, "\n\n\n\n\n\n\n")
+  // console.log("\n\n\n\n\n\n\n\n geoJSON *** ANIMATED TRIPS *** result", animatedgeoJsonTransfers[0].geometry.coordinates, "\n\n\n\n\n\n\n")
+ 
+
+  let geoJsonMeta = {"type":"FeatureCollection", "features":geoJSONtransfers}
+  let geoJsonMetaAnim = {"type":"FeatureCollection", "features":animatedgeoJsonTransfers}
+
+  transferObjectFinal.geoJson = geoJsonMeta;
+  transferObjectFinal.animated = geoJsonMetaAnim
+
+  return transferObjectFinal
+ }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -474,6 +604,28 @@ async function processController() {
   // *** TODO now lets complete the API by setting up the routes
 
   // console.log(sites)
+
+  
+  
+  
+  let finalObject = [calculateSiteMetaStats(processedTransfers[0]),processedTransfers[1]]
+
+  
+
+  console.log("\n\n\n\n\n\n\n     final object:   ", finalObject[0].geoJsonSites.features)
+
+
+
+  let geoJsonTransferObject = await createGeoJsonTransferFile(finalObject)
+
+  // console.log("     geo JSON: ", geoJsonTransferObject.geoJson.features)
+
+  fs.writeFileSync("transfersGeoJson.json", JSON.stringify(geoJsonTransferObject.geoJson))
+  fs.writeFileSync("siteOutput.json", JSON.stringify(finalObject[0].sites))
+  fs.writeFileSync("sitesGeoJson.json", JSON.stringify(finalObject[0].geoJsonSites))
+
+  // fs.writeFileSync("transfersGeoJsonAnim.json", JSON.stringify(geoJsonObject.animated))    // *** TODO *** not quite working right, think I'm setting the wrong coordinates and also trip view not much without interpolated steps.
+
 }
 
 
